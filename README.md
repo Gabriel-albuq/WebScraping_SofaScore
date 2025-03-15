@@ -2,6 +2,12 @@
 
 Este projeto tem como objetivo a extração de dados esportivos utilizando a API do SofaScore. O processo é realizado em 9 scripts, cada um responsável por uma etapa diferente da extração, transformação e armazenamento de dados. A cada etapa, os dados são extraídos, processados e salvos em dois formatos: **JSON** (Camada Bronze) e **CSV** (Camada Silver).
 
+## Aviso Importante sobre a Extração de API
+
+**⚠️ Atenção:** Ao utilizar a extração de dados da API, **use com cuidado**. Não selecione **vários campeonatos e temporadas ao mesmo tempo**, pois isso pode sobrecarregar a API e causar falhas na extração ou atrasos significativos. Para evitar problemas, **limite a quantidade de campeonatos e temporadas selecionadas em uma única execução**.
+
+---
+
 ## Sumário
 
 1. [Introdução](#introdução)
