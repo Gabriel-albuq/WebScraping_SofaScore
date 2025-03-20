@@ -9,26 +9,25 @@ from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
-def get_tournaments(scraper, sport_country_id):
+def get_tournaments(sport_country_id):
     """
     Busca os dados dos torneios disponíveis no esporte.
     """
+    scraper = SofaScoreScraper()
     url = f"https://www.sofascore.com/api/v1/category/{sport_country_id}/unique-tournaments"
     return scraper._make_request(url)
 
-def extract_tournaments(scraper, search_sports_countries):
+def extract_tournaments(sport_country_id):
     '''
     Extrair a resposta do servidor ao scraper dos Torneios
 
     :param scraper: Classe do SofaScoreScraper
     :return: A resposta do servidor ao scraper Torneios
     '''
-    response_tournaments = []
-    for sport_country_id in search_sports_countries:
-        response_tournaments.append({
-            'sport_country_id': sport_country_id,
-            'tournaments': get_tournaments(scraper, sport_country_id)
-        })
+    response_tournaments =  [{
+        'sport_country_id': sport_country_id,
+        'tournaments': get_tournaments(sport_country_id)
+    }]
 
     return response_tournaments
 
@@ -61,23 +60,32 @@ def transform_tournaments(response_tournaments):
 
     return df_tournaments
 
-def load_tournaments(search_sports_countries):
-    scraper = SofaScoreScraper()
+def load_tournaments(search_sports_countries_id, save_path, datetime_now):
+    response_tournaments_agg = []
+    df_tournaments_agg = pd.DataFrame()
+    for sport_country_id in search_sports_countries_id:
+        title = f"Tournaments - {sport_country_id} - {datetime_now}"
+        print(f"Extraindo: {title}")
+        response_tournaments = extract_tournaments(sport_country_id)
+        df_tournaments = transform_tournaments(response_tournaments)
 
-    response_tournaments = extract_tournaments(scraper, search_sports_countries)
-    df_tournaments = transform_tournaments(response_tournaments)
+        # Salvar
+        save_response_to_json(response_tournaments, save_path, title)
+        save_dataframe_to_csv(df_tournaments, save_path, title)
 
-    return response_tournaments, df_tournaments
+        # Agrupar
+        response_tournaments_agg.append(response_tournaments)
+        df_tournaments_agg = pd.concat([df_tournaments_agg, df_tournaments], ignore_index=True)
+
+        return response_tournaments_agg, df_tournaments_agg
 
 if __name__ == "__main__":
     # Input
-    save_path = r'data\outputs'
-    list_countries = ['13'] # Escolher o ID país. 1 = Inglaterra, 13 = Brasil
-
-    response_tournaments, df_tournaments = load_tournaments(list_countries)
-    text_tournaments = "-".join(list_countries)
-
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    title = f"Tournaments {text_tournaments} - {datetime_now}"
-    save_response_to_json(response_tournaments, save_path, title)
-    save_dataframe_to_csv(df_tournaments, save_path, title)
+    save_path = r'data\outputs'
+    search_sports_countries_id = ['13'] # Escolher o ID país. 1 = Inglaterra, 13 = Brasil
+
+    response_tournaments_agg, df_tournaments_agg = load_tournaments(search_sports_countries_id, save_path, datetime_now)
+
+    
+    

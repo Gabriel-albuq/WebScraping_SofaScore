@@ -10,33 +10,31 @@ from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
-def get_matches(scraper, unique_tournament_id, season_id, round, slug=None):
+def get_matches(unique_tournament_id, season_id, round, slug=None):
     """
     Busca os dados de uma partida de uma rodada de um torneio específico e temporada.
     """
+    scraper = SofaScoreScraper()
     if slug:
         url = f"https://www.sofascore.com/api/v1/unique-tournament/{unique_tournament_id}/season/{season_id}/events/round/{round}/slug/{slug}"
     else:
         url = f"https://www.sofascore.com/api/v1/unique-tournament/{unique_tournament_id}/season/{season_id}/events/round/{round}"
     return scraper._make_request(url)
 
-def extract_matches(scraper, search_tournament_seasons_round_slug):
+def extract_matches(tournament_id, season_id, round, slug):
     '''
     Extrair a resposta do servidor ao scraper das Partidas
 
     :param scraper: Classe do SofaScoreScraper
     :return: A resposta do servidor ao scraper das Partidas
     '''
-    
-    response_matches = []
-    for unique_tournament_id, season_id, round, slug in search_tournament_seasons_round_slug:
-        response_matches.append({
-            'unique_tournament_id': unique_tournament_id,
-            'season_id': season_id,
-            'round': round,
-            'slug': slug,
-            'matches': get_matches(scraper, unique_tournament_id, season_id, round, slug)
-        })
+    response_matches = [{
+        'unique_tournament_id': tournament_id,
+        'season_id': season_id,
+        'round': round,
+        'slug': slug,
+        'matches': get_matches(tournament_id, season_id, round, slug)
+    }]
 
     return response_matches
 
@@ -135,34 +133,34 @@ def transform_matches(response_matches):
 
     return df_matches
 
-def load_matches(search_tournament_seasons_round_slug):
-    scraper = SofaScoreScraper()
+def load_matches(search_tournament_seasons_round_slug, save_path, datetime_now):
+    response_matches_agg = []
+    df_matches_agg = pd.DataFrame()
+    for tournament_id, season_id, round, slug in search_tournament_seasons_round_slug:
+        title = f"Matches - {tournament_id} - {season_id} - {round} - {slug} - {datetime_now}"
+        print(f"Extraindo: {title}")
+        response_matches = extract_matches(tournament_id, season_id, round, slug)
+        df_matches = transform_matches(response_matches)
 
-    response_matches = extract_matches(scraper, search_tournament_seasons_round_slug)
-    df_matches = transform_matches(response_matches)
+        # Agrupar
+        response_matches_agg.append(response_matches)
+        df_matches_agg = pd.concat([df_matches_agg, df_matches], ignore_index=True)
 
-    return response_matches, df_matches
+        # Salvar
+        save_response_to_json(response_matches, save_path, title)
+        save_dataframe_to_csv(df_matches, save_path, title)
+
+    return response_matches_agg, df_matches_agg
 
 if __name__ == "__main__":
     # Input
-    save_path = r'data\outputs'
-    input_path = r"data\outputs\silver\Rounds 325-58766_325-48982_390-59015_390-49058 - 2025-03-15_14-10-35.csv"
-
-    df_input = pd.read_csv(input_path)
-    df_input = df_input.replace({np.nan: None})
-    df_interest = df_input
-    search_rounds = list(df_interest[['unique_tournament_id', 'season_id', 'round', 'slug']].apply(tuple, axis=1))
-    
-    print("------ Campeonatos/Temporadas/Rodadas Escolhidas ------")
-    for _, tournament_season in df_interest.iterrows():
-        print(tournament_season['unique_tournament_id'], "-", tournament_season['season_id'], "-", tournament_season['round'], "-", tournament_season['slug'])
-    print("------------------------------------")
-
-    response_matches, df_matches = load_matches(search_rounds)
-
-    # Salvar
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    text_search_tournaments_seasons = "_".join(set([f"{unique_tournament_id}-{season_id}" for unique_tournament_id, season_id, round, slug in search_rounds]))
-    title = f"Matches {text_search_tournaments_seasons} - {datetime_now}"
-    save_response_to_json(response_matches, save_path, title)
-    save_dataframe_to_csv(df_matches, save_path, title)
+    save_path = r'data\outputs'
+    search_tournament_seasons_round_slug = [("390", "59015", "38", None)]
+    
+    response_matches_agg, df_matches_agg = load_matches(search_tournament_seasons_round_slug, save_path, datetime_now)
+
+    
+
+    
+

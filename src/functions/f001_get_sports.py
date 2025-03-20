@@ -52,23 +52,23 @@ def transform_sports(response_sports):
 
     return df_sports
 
-def load_sports():
+def load_sports(save_path, datetime_now):
     scraper = SofaScoreScraper()
+    title = f"Sports - {datetime_now}"
+    print(f"Extraindo: {title}")
     response_sports = extract_sports(scraper)
     df_sports = transform_sports(response_sports)
+
+    save_response_to_json(response_sports, save_path, title)
+    save_dataframe_to_csv(df_sports, save_path, title)
 
     return response_sports, df_sports
 
 if __name__ == "__main__":
-    # Inputs
-    save_path = r'data\outputs'
-
-    response_sports, df_sports = load_sports()
-    
-    # Salvar
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    title = f"Sports - {datetime_now}"
-    save_response_to_json(response_sports, save_path, title)
-    save_dataframe_to_csv(df_sports, save_path, title)
+    save_path = r'data\outputs'
+    response_sports, df_sports = load_sports(save_path, datetime_now)
+    
+    
     
 

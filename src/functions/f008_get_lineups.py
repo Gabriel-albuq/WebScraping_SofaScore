@@ -10,30 +10,30 @@ from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
-def get_lineups(scraper, match_id):
+def get_lineups(match_id):
         """
         Busca as escalações de uma partida específica.
         """
+        scraper = SofaScoreScraper()
         url = f"https://www.sofascore.com/api/v1/event/{match_id}/lineups"
         return scraper._make_request(url)
 
-def extract_lineups(scraper, search_match):
+def extract_lineups(match_id):
     '''
     Extrair a resposta do servidor para as escalações
 
     :param scraper: Classe do SofaScoreScraper
     :return: A resposta do servidor para as escalações
     '''
-    response_lineups = []
-    for match_id in search_match:
-        try:
-            response_lineups.append({
-                'match_id': match_id,
-                'lineups': get_lineups(scraper, match_id)
-            })
-        except:
-            print(f"Erro na Match_id: {match_id}")
-            pass
+    try:
+        response_lineups = [{
+            'match_id': match_id,
+            'lineups': get_lineups(match_id)
+        }]
+    except:
+        response_lineups = None
+        print(f"Erro na Match_id: {match_id}")
+        pass
 
     return response_lineups
 
@@ -209,34 +209,32 @@ def transform_lineups(response_matches):
 
     return df_lineups
 
-def load_lineups(search_match):
-    scraper = SofaScoreScraper()
+def load_lineups(search_match_id, save_path, datetime_now):
+    response_lineups_agg = []
+    df_lineups_agg = pd.DataFrame()
+    for match_id in search_match_id:
+        title = f"Lineups - {match_id} - {datetime_now}"
+        print(f"Extraindo: {title}")
+        response_lineups = extract_lineups(match_id)
 
-    response_lineups = extract_lineups(scraper, search_match)
-    df_lineups = transform_lineups(response_lineups)
+        if response_lineups != None:
+            df_lineups = transform_lineups(response_lineups)
 
-    return response_lineups, df_lineups
+            # Salvar
+            save_response_to_json(response_lineups, save_path, title)
+            save_dataframe_to_csv(df_lineups, save_path, title)
+
+            # Agrupar
+            response_lineups_agg.append(response_lineups)
+            df_lineups_agg = pd.concat([df_lineups_agg, df_lineups], ignore_index=True)
+
+    return response_lineups_agg, df_lineups_agg
 
 if __name__ == "__main__":
-    save_path = r'data\outputs'
-    input_path = r"data\outputs\silver\Matches 390-49058_390-59015_325-58766_325-48982 - 2025-03-15_14-14-26.csv"
-
-    df_input = pd.read_csv(input_path)
-    df_input = df_input.replace({np.nan: None})
-    df_interest = df_input
-    search_tournament_seasons = list(df_interest[['unique_tournament_id', 'season_id']].apply(tuple, axis=1))
-    search_match = df_interest['match_id']
-    
-    # print("------ Campeonatos/Temporadas/Rodadas Escolhidas ------")
-    # for _, match in df_interest.iterrows():
-    #     print(match['match_id'])
-
-    response_lineups, df_lineups = load_lineups(search_match)
-
-    # Salvar
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    text_search_match = "_".join(set([f"{unique_tournament_id}-{season_id}" for unique_tournament_id, season_id in search_tournament_seasons]))
-    title = f"Lineups {text_search_match} - {datetime_now}"
-    save_response_to_json(response_lineups, save_path, title)
-    save_dataframe_to_csv(df_lineups, save_path, title)
+    save_path = r'data\outputs'
+    search_match_id = ["12146574", "12146576"]
+
+    response_lineups_agg, df_lineups_agg = load_lineups(search_match_id, save_path, datetime_now)
+
    

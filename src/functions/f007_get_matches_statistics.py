@@ -10,14 +10,15 @@ from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
-def get_matches_statistics(scraper, match_id):
+def get_matches_statistics(match_id):
         """
         Busca os dados de uma partida de uma rodada de um torneio específico e temporada.
         """
         url = f"https://www.sofascore.com/api/v1/event/{match_id}/statistics"
+        scraper = SofaScoreScraper()
         return scraper._make_request(url)
 
-def extract_matches_statistics(scraper, search_match):
+def extract_matches_statistics(match_id):
     '''
     Extrair a resposta do servidor para as estatísticas
 
@@ -25,16 +26,15 @@ def extract_matches_statistics(scraper, search_match):
     :return: A resposta do servidor para as estatísticas
     '''
     
-    response_statistics = []
-    for match_id in search_match:
-        try:
-            response_statistics.append({
-                'match_id': match_id,
-                'statistics': get_matches_statistics(scraper, match_id)
-            })
-        except:
-            print(f"Erro na Match_id: {match_id}")
-            pass
+    try:
+        response_statistics = [{
+            'match_id': match_id,
+            'statistics': get_matches_statistics(match_id)
+        }]
+    except:
+        response_statistics = None
+        print(f"Erro na Match_id: {match_id}")
+        pass
 
     return response_statistics
 
@@ -92,36 +92,34 @@ def transform_matches_statistics(response_matches):
 
     return df_statistics
 
-def load_matches_statistics(search_matc):
-    scraper = SofaScoreScraper()
+def load_matches_statistics(search_match_id, save_path, datetime_now):
+    response_matches_statistics_agg = []
+    df_matches_statistics_agg = pd.DataFrame()
+    for match_id in search_match_id:
+        title = f"Matches Statistics - {match_id} - {datetime_now}"
+        print(f"Extraindo: {title}")
+        response_matches_statistics = extract_matches_statistics(match_id)
+        if response_matches_statistics != None:
+            df_matches_statistics = transform_matches_statistics(response_matches_statistics)
 
-    response_matches_statistics = extract_matches_statistics(scraper, search_match)
-    df_matches_statistics = transform_matches_statistics(response_matches_statistics)
+            # Salvar
+            save_response_to_json(response_matches_statistics, save_path, title)
+            save_dataframe_to_csv(df_matches_statistics, save_path, title)
 
-    return response_matches_statistics, df_matches_statistics
+            # Agrupar
+            response_matches_statistics_agg.append(response_matches_statistics)
+            df_matches_statistics_agg = pd.concat([df_matches_statistics_agg, df_matches_statistics], ignore_index=True)
+
+    return response_matches_statistics_agg, df_matches_statistics_agg
 
 if __name__ == "__main__":
     # Input
-    save_path = r'data\outputs'
-    input_path = r"data\outputs\silver\Matches 390-49058_390-59015_325-58766_325-48982 - 2025-03-15_14-14-26.csv"
-
-    df_input = pd.read_csv(input_path)
-    df_input = df_input.replace({np.nan: None})
-    df_interest = df_input
-    search_tournament_seasons = list(df_interest[['unique_tournament_id', 'season_id']].apply(tuple, axis=1))
-    search_match = df_interest['match_id']
-
-    print("------ Campeonatos/Temporadas/Rodadas Escolhidas ------")
-    for _, tournament_season in df_interest.iterrows():
-        print(tournament_season['unique_tournament_id'], "-", tournament_season['season_id'], "-", tournament_season['round'], "-", tournament_season['slug'])
-    print("------------------------------------")
-
-    response_matches_statistics, df_matches_statistics = load_matches_statistics(search_match)
-
-    # Salvar
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    text_search_match = "_".join(set([f"{unique_tournament_id}-{season_id}" for unique_tournament_id, season_id in search_tournament_seasons]))
-    title = f"Matches Statistics {text_search_match} - {datetime_now}"
-    save_response_to_json(response_matches_statistics, save_path, title)
-    save_dataframe_to_csv(df_matches_statistics, save_path, title)
+    save_path = r'data\outputs'
+    search_match_id = ["12146574", "12146576"]
+
+    response_matches_statistics_agg, df_matches_statistics_agg = load_matches_statistics(search_match_id, save_path, datetime_now)
+    
+    
+
    

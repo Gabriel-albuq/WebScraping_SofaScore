@@ -10,32 +10,32 @@ from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
-def get_lineups_statistics(scraper, match_id):
+def get_lineups_statistics(match_id):
         """
         Busca as escalações de uma partida específica.
         """
+        scraper = SofaScoreScraper()
         url = f"https://www.sofascore.com/api/v1/event/{match_id}/lineups"
         return scraper._make_request(url)
 
-def extract_lineups_statistics(scraper, search_match):
+def extract_lineups_statistics(match_id):
     '''
     Extrair a resposta do servidor para as escalações
 
     :param scraper: Classe do SofaScoreScraper
     :return: A resposta do servidor para as escalações
     '''
-    response_lineups = []
-    for match_id in search_match:
-        try:
-            response_lineups.append({
-                'match_id': match_id,
-                'lineups': get_lineups_statistics(scraper, match_id)
-            })
-        except:
-            print(f"Erro na Match_id: {match_id}")
-            pass
+    try:
+        extract_lineups_statistics = [{
+            'match_id': match_id,
+            'lineups': get_lineups_statistics(match_id)
+        }]
+    except:
+        extract_lineups_statistics = None
+        print(f"Erro na Match_id: {match_id}")
+        pass
 
-    return response_lineups
+    return extract_lineups_statistics
 
 def transform_lineups_statistics(response_matches):
     '''
@@ -184,33 +184,30 @@ def transform_lineups_statistics(response_matches):
 
     return df_lineups_statistics
 
-def load_lineups_statistics(search_match):
-    scraper = SofaScoreScraper()
+def load_lineups_statistics(search_match_id, save_path, datetime_now):
+    response_lineups_statistics_agg = []
+    df_lineups_statistics_agg = pd.DataFrame()
+    for match_id in search_match_id:
+        title = f"Lineups Statistics - {match_id} - {datetime_now}"
+        print(f"Extraindo: {title}")
+        response_lineups_statistics = extract_lineups_statistics(match_id)
 
-    response_lineups = extract_lineups_statistics(scraper, search_match)
-    df_lineups = transform_lineups_statistics(response_lineups)
+        if response_lineups_statistics != None:
+            df_lineups_statistics = transform_lineups_statistics(response_lineups_statistics)
 
-    return response_lineups, df_lineups
+            # Salvar
+            save_response_to_json(response_lineups_statistics, save_path, title)
+            save_dataframe_to_csv(df_lineups_statistics, save_path, title)
+
+            # Agrupar
+            response_lineups_statistics_agg.append(response_lineups_statistics)
+            df_lineups_statistics_agg = pd.concat([df_lineups_statistics_agg, df_lineups_statistics], ignore_index=True)
+
+    return response_lineups_statistics_agg, df_lineups_statistics_agg
 
 if __name__ == "__main__":
-    save_path = r'data\outputs'
-    input_path = r"data\outputs\silver\Matches 390-49058_390-59015_325-58766_325-48982 - 2025-03-15_14-14-26.csv"
-
-    df_input = pd.read_csv(input_path)
-    df_input = df_input.replace({np.nan: None})
-    df_interest = df_input
-    search_tournament_seasons = list(df_interest[['unique_tournament_id', 'season_id']].apply(tuple, axis=1))
-    search_match = df_interest['match_id']
-    
-    # print("------ Campeonatos/Temporadas/Rodadas Escolhidas ------")
-    # for _, match in df_interest.iterrows():
-    #     print(match['match_id'])  
-
-    response_lineups, df_lineups_statistics = load_lineups_statistics(search_match)
-
-    # Salvar
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    text_search_match = "_".join(set([f"{unique_tournament_id}-{season_id}" for unique_tournament_id, season_id in search_tournament_seasons]))
-    title = f"Lineups Statistics {text_search_match} - {datetime_now}"
-    save_response_to_json(response_lineups, save_path, title)
-    save_dataframe_to_csv(df_lineups_statistics, save_path, title)
+    save_path = r'data\outputs'
+    search_match_id = ["12146574", "12146576"]
+
+    response_lineups_statistics_agg, df_lineups_statistics_agg = load_lineups_statistics(search_match_id, save_path, datetime_now)

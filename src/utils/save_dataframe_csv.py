@@ -9,7 +9,9 @@ def save_dataframe_to_csv(df, path, title):
     :param path: str - O caminho do diretório onde o arquivo será salvo.
     :param title: str - O título (nome) do arquivo CSV.
     """
-    path_silver = os.path.join(path, "silver")
+    title_path = title.split(" - ")[0]
+    datetime_now = title.rsplit(" - ", 1)[-1]
+    path_silver = os.path.join(path, "silver", datetime_now, title_path)
 
     # Garante que o caminho exista
     os.makedirs(path_silver, exist_ok=True)
