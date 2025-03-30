@@ -13,12 +13,8 @@ def save_dataframe_to_csv(df, path, title):
     datetime_now = title.rsplit(" - ", 1)[-1]
     path_silver = os.path.join(path, "silver", datetime_now, title_path)
 
-    # Garante que o caminho exista
     os.makedirs(path_silver, exist_ok=True)
-    
-    # Concatena o caminho com o título e a extensão .csv
     file_path = os.path.join(path_silver, f"{title}.csv")
     
-    # Salva o DataFrame como CSV
     df.to_csv(file_path, index=False, encoding='utf-8')
     print(f"Arquivo salvo com sucesso em: {file_path}")
