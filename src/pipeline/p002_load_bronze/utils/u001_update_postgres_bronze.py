@@ -12,7 +12,7 @@ sys.path.append(root_dir)
 from src.utils.create_engine_postgres import create_engine_postgres
 
 def update_json_postgres(table_name, schema, json_path):
-    engine = create_engine_postgres(see_echo=True)
+    engine = create_engine_postgres(see_echo=False)
 
     Session = sessionmaker(bind=engine)
     session = Session()

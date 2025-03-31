@@ -3,7 +3,7 @@ import os
 from sqlalchemy import Column, Integer, String, JSON, create_engine
 from sqlalchemy.orm import declarative_base
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 from src.utils.create_engine_postgres import create_engine_postgres
 
 Base = declarative_base()
