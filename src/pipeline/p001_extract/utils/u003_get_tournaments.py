@@ -21,21 +21,30 @@ def extract_tournaments(sport_country_id):
     '''
     Extrair a resposta do servidor ao scraper dos Torneios
 
-    :param scraper: Classe do SofaScoreScraper
-    :return: A resposta do servidor ao scraper Torneios
+    :param sport_country_id: ID do país e esporte para buscar os torneios
+    :return: A resposta do servidor ao scraper dos Torneios
     '''
-    response_tournaments =  [{
-        'sport_country_id': sport_country_id,
-        'tournaments': get_tournaments(sport_country_id)
-    }]
-
+    try:
+        response_tournaments = [{
+            'sport_country_id': sport_country_id,
+            'tournaments': get_tournaments(sport_country_id)
+        }]
+        
+        if not isinstance(response_tournaments[0]['tournaments'], dict):
+            print(f"Erro ao buscar torneios para o país/ID {sport_country_id}: resposta inválida.")
+            return None
+    except Exception as e:
+        print(f"Erro ao buscar dados dos torneios para o país/ID {sport_country_id}: {str(e)}")
+        response_tournaments = None
+    
     return response_tournaments
 
 def transform_tournaments(response_tournaments, datetime_now):
     '''
     Transformar os dados do response_tournaments em um dataframe
 
-    :param response_tournaments: A resposta do servidor ao scraper Tournaments
+    :param response_tournaments: A resposta do servidor ao scraper dos torneios
+    :param datetime_now: Data e hora atuais
     :return: Um dataframe com os Torneios
     '''
     list_sport_country_id = []
@@ -43,14 +52,24 @@ def transform_tournaments(response_tournaments, datetime_now):
     list_tournament_id = []
     list_category_name = []
     list_updated_at = []
-    for sport_tournaments in response_tournaments:
-        for group in sport_tournaments['tournaments']['groups']:
-            for tournament in group['uniqueTournaments']:
-                list_sport_country_id.append(sport_tournaments['sport_country_id'])
-                list_tournament_name.append(tournament['name'])
-                list_tournament_id.append(tournament['id'])
-                list_category_name.append(tournament['category']['name'])
-                list_updated_at.append(datetime_now)
+    
+    if response_tournaments:
+        for sport_tournaments in response_tournaments:
+            if 'tournaments' in sport_tournaments:
+                for group in sport_tournaments['tournaments'].get('groups', []):
+                    for tournament in group.get('uniqueTournaments', []):
+                        if 'category' in tournament and 'name' in tournament['category'] and 'id' in tournament['category']:
+                            list_sport_country_id.append(sport_tournaments['sport_country_id'])
+                            list_tournament_name.append(tournament['name'])
+                            list_tournament_id.append(tournament['id'])
+                            list_category_name.append(tournament['category']['name'])
+                            list_updated_at.append(datetime_now)
+                        else:
+                            print(f"Dados faltando ou inválidos para o torneio: {tournament}")
+            else:
+                print(f"Dados de torneios ausentes para o país/ID: {sport_tournaments['sport_country_id']}")
+    else:
+        print("Resposta dos torneios está vazia ou inválida.")
 
     # Criar DataFrame
     df_tournaments = pd.DataFrame({
@@ -66,31 +85,32 @@ def transform_tournaments(response_tournaments, datetime_now):
 def load_tournaments(search_sports_countries_id, save_path, datetime_now):
     response_tournaments_agg = []
     df_tournaments_agg = pd.DataFrame()
+    
     for sport_country_id in search_sports_countries_id:
         title = f"Tournaments - {sport_country_id} - {datetime_now}"
         table = title.split(" - ")[0].lower()
         print(f"Extraindo: {title}")
         
         response_tournaments = extract_tournaments(sport_country_id)
-        df_tournaments = transform_tournaments(response_tournaments, datetime_now)
+        if response_tournaments:
+            df_tournaments = transform_tournaments(response_tournaments, datetime_now)
 
-        # Salvar
-        save_response_to_json(response_tournaments, save_path, title)
-        save_dataframe_to_csv(df_tournaments, save_path, title)
+            # Salvar
+            save_response_to_json(response_tournaments, save_path, title)
+            save_dataframe_to_csv(df_tournaments, save_path, title)
 
-        # Agrupar
-        response_tournaments_agg.append(response_tournaments)
-        df_tournaments_agg = pd.concat([df_tournaments_agg, df_tournaments], ignore_index=True)
-
-        return response_tournaments_agg, df_tournaments_agg
+            # Agrupar
+            response_tournaments_agg.append(response_tournaments)
+            df_tournaments_agg = pd.concat([df_tournaments_agg, df_tournaments], ignore_index=True)
+        else:
+            print(f"Não foi possível extrair dados para o país/ID: {sport_country_id}")
+        
+    return response_tournaments_agg, df_tournaments_agg
 
 if __name__ == "__main__":
     # Input
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     save_path = r'data\outputs'
-    search_sports_countries_id = ['13'] # Escolher o ID país. 1 = Inglaterra, 13 = Brasil
+    search_sports_countries_id = ['13']  # Escolher o ID país. 1 = Inglaterra, 13 = Brasil
 
     response_tournaments_agg, df_tournaments_agg = load_tournaments(search_sports_countries_id, save_path, datetime_now)
-
-    
-    

@@ -10,18 +10,18 @@ from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
 def get_lineups_statistics(match_id):
-        """
-        Busca as escalações de uma partida específica.
-        """
-        scraper = SofaScoreScraper()
-        url = f"https://www.sofascore.com/api/v1/event/{match_id}/lineups"
-        return scraper._make_request(url)
+    """
+    Busca as escalações de uma partida específica.
+    """
+    scraper = SofaScoreScraper()
+    url = f"https://www.sofascore.com/api/v1/event/{match_id}/lineups"
+    return scraper._make_request(url)
 
 def extract_lineups_statistics(match_id):
     '''
     Extrair a resposta do servidor para as escalações
 
-    :param scraper: Classe do SofaScoreScraper
+    :param match_id: ID da partida
     :return: A resposta do servidor para as escalações
     '''
     try:
@@ -29,9 +29,9 @@ def extract_lineups_statistics(match_id):
             'match_id': match_id,
             'lineups': get_lineups_statistics(match_id)
         }]
-    except:
+    except Exception as e:
         extract_lineups_statistics = None
-        print(f"Erro na Match_id: {match_id}")
+        print(f"Erro na Match_id: {match_id} - Erro: {e}")
         pass
 
     return extract_lineups_statistics
@@ -55,13 +55,14 @@ def transform_lineups_statistics(response_matches):
     list_player_number = []
     list_player_substitute = []
     list_player_captain = []
-    list_player_out_reason = [] # 1: Machucado / 2: / 3: Suspenso
+    list_player_out_reason = [] # 1: Machucado / 2: Suspenso
     list_player_country = []
     list_player_market_currency = []
     list_player_market_value = [] 
     list_player_brithdate = []
     list_player_statistic_name = []   
     list_player_statistic_value = []
+
     for match in response_matches:
         match_id = match["match_id"]
 
@@ -123,11 +124,10 @@ def transform_lineups_statistics(response_matches):
                     except:
                         player_captain = (None)
 
-
                     try:
                         for stat_name, stat_value in player["statistics"].items():
-                            list_match_id_player_id_statistic_name.append(f"{match_id}{player["player"]["id"]}{stat_name}")
-                            list_match_id_player_id.append(f"{match_id}{player["player"]["id"]}")
+                            list_match_id_player_id_statistic_name.append(f"{match_id}{player['player']['id']}{stat_name}")
+                            list_match_id_player_id.append(f"{match_id}{player['player']['id']}")
                             list_match_id.append(match_id)
                             list_home_or_away.append(home_or_away)  # "home" ou "away"
                             list_formation.append(formation)
@@ -146,8 +146,8 @@ def transform_lineups_statistics(response_matches):
                             list_player_statistic_name.append(stat_name)     
                             list_player_statistic_value.append(stat_value)
                     except:
-                        list_match_id_player_id_statistic_name.append(f"{match_id}{player["player"]["id"]}{stat_name}")
-                        list_match_id_player_id.append(f"{match_id}{player["player"]["id"]}")
+                        list_match_id_player_id_statistic_name.append(f"{match_id}{player['player']['id']}{stat_name}")
+                        list_match_id_player_id.append(f"{match_id}{player['player']['id']}")
                         list_match_id.append(match_id)
                         list_home_or_away.append(home_or_away)  # "home" ou "away"
                         list_formation.append(formation)
@@ -165,8 +165,6 @@ def transform_lineups_statistics(response_matches):
                         list_player_out_reason.append(player_out_reason) 
                         list_player_statistic_name.append(None)     
                         list_player_statistic_value.append(None)               
-
-                # Afastados não tem estatísticas
 
     df_lineups_statistics = pd.DataFrame({
         "match_id_player_id_statistic_name": list_match_id_player_id_statistic_name,

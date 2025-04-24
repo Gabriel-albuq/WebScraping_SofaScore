@@ -50,7 +50,6 @@ def transform_matches(response_matches):
     list_round = []
     list_slug = []
     list_tournament_name = []
-    list_tournament_name = []
     list_match_id = []
     list_match_slug = []
     list_match_timestamp = []
@@ -62,11 +61,13 @@ def transform_matches(response_matches):
     list_away_team_name = []
     list_away_score = []
     list_cup_round_type = []
+    
     for match in response_matches:
         unique_tournament_id = match["unique_tournament_id"]
         season_id = match["season_id"]
         round = match['round']
         slug = match['slug']
+        
         for match_data in match['matches']['events']:
             tournament_name = match_data['tournament']['name']
             match_id = match_data['id']
@@ -102,7 +103,7 @@ def transform_matches(response_matches):
             list_match_id.append(match_id)
             list_match_slug.append(match_slug)
             list_match_timestamp.append(match_timestamp) # Não está pegando corretamente
-            list_match_datetime.append(match_datetime_br) # # Não está pegando corretamente
+            list_match_datetime.append(match_datetime_br) # Não está pegando corretamente
             list_home_team_id.append(home_team_id)
             list_home_team_name.append(home_team_name)
             list_home_score.append(home_score)
@@ -142,9 +143,11 @@ def transform_matches(response_matches):
 def load_matches(search_tournament_seasons_round_slug, save_path, datetime_now):
     response_matches_agg = []
     df_matches_agg = pd.DataFrame()
+    
     for tournament_id, season_id, round, slug in search_tournament_seasons_round_slug:
         title = f"Matches - {tournament_id} - {season_id} - {round} - {slug} - {datetime_now}"
         print(f"Extraindo: {title}")
+        
         response_matches = extract_matches(tournament_id, season_id, round, slug)
         df_matches = transform_matches(response_matches)
 
@@ -165,8 +168,3 @@ if __name__ == "__main__":
     search_tournament_seasons_round_slug = [("390", "59015", "38", None)]
     
     response_matches_agg, df_matches_agg = load_matches(search_tournament_seasons_round_slug, save_path, datetime_now)
-
-    
-
-    
-
