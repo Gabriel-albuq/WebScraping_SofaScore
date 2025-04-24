@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper import SofaScoreScraper
+from scrapers.sofascore_scraper_playwright import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
