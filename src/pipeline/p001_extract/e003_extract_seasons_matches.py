@@ -2,6 +2,7 @@ from datetime import datetime
 import sys
 import os
 import pandas as pd
+import logging
 
 # Adiciona o diretório raiz ao sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
@@ -16,6 +17,21 @@ from src.pipeline.p001_extract.utils.u007_get_matches_statistics import load_mat
 from src.pipeline.p001_extract.utils.u008_get_lineups import load_lineups
 from src.pipeline.p001_extract.utils.u009_get_lineups_statistics import load_lineups_statistics
 
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 if __name__ == "__main__":
     '''
     Pegar os dados iniciais, comuns para toda extração
@@ -26,34 +42,48 @@ if __name__ == "__main__":
     save_path = r'data\outputs'
     search_sports=['football']
     search_sports_countries_id = ['13']
-    search_tournaments_id = ['390']
+    search_tournaments_id = [
+                            '14659', # Acreano
+                            '10294', # Alagoano
+                            '13668', # Amapazão
+                            '11702', # Amazonense
+                            '374', # Baiano
+                            '325', # BrasileirÃ£o Betano
+                            '390', # BrasileirÃ£o Série B
+                            '11682', # Brasiliense
+                            '14650', # Capixaba
+                            '92', #	Carioca
+                            '376', # Catarinense
+                            '378', # Cearense
+                            '373', # Copa Betano do Brasil
+                            '1596', # Copa do Nordeste
+                            '377', # GaÃºcho
+                            '381', # Goiano
+                            '11664', # Maranhense
+                            '11669', # Paraense
+                            '10295', # Paraibano
+                            '382', # Paranaense
+                            '372', # Paulista Série A1
+                            '380', # Pernambucano
+                            '13353', # Piauiense
+                            '11663', # Potiguar, 1 Divisão 
+                            '14658', # Rondoniense
+                            '14733', # Roraimense
+                            '11665', # Sergipano
+                            '11679', # Sul-Mato-Grossense
+                            '14602', # Supercopa do Brasil
+                            '14686', # Tocantinense
+    ]
+
+
+
     search_tournament_seasons_id = [
-                                        ('390', '72603'),
                                         ('390', '59015'),
                                         ('390', '49058'),
                                         ('390', '40560'),
                                         ('390', '36162'),
                                         ('390', '27593'),
-                                        ('390', '22932'),
-                                        ('390', '16184'),
-                                        ('390', '13101'),
-                                        ('390', '11430'),
-                                        ('390', '10189'),
-                                        ('390', '7780'),
-                                        ('390', '6143'),
-                                        ('390', '4480'),
-                                        ('390', '3346'),
-                                        ('390', '2685'),
-                                        ('390', '2080'),
-                                        ('390', '1224')
-    ]
-    search_tournament_seasons_id = [
-                                        ('390', '6143'),
-                                        ('390', '4480'),
-                                        ('390', '3346'),
-                                        ('390', '2685'),
-                                        ('390', '2080'),
-                                        ('390', '1224')
+                                        ('390', '22932')
     ]
     
     # Extract

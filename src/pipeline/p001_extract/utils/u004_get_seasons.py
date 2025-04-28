@@ -2,6 +2,22 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime, timezone, timedelta
+import logging
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
@@ -46,7 +62,7 @@ def transform_seasons(response_seasons, datetime_now):
     list_season_year = []
     list_season_id = []
     list_updated_at = []
-    
+
     for tournament_id in response_seasons:
         for season in tournament_id['seasons']['seasons']:
             list_unique_tournament_id.append(tournament_id['unique_tournament_id'])
@@ -74,7 +90,7 @@ def load_seasons(search_tournaments_id, save_path, datetime_now):
     for tournament_id in search_tournaments_id:
         title = f"Seasons - {tournament_id} - {datetime_now}"
         table = title.split(" - ")[0].lower()
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
 
         response_seasons = extract_seasons(tournament_id)
         df_seasons = transform_seasons(response_seasons, datetime_now)

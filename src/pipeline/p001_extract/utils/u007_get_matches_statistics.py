@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import logging
 from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
@@ -8,6 +9,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from scrapers.sofascore_scraper_playwright import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 def get_matches_statistics(match_id):
     """
@@ -30,8 +46,8 @@ def extract_matches_statistics(match_id):
         response = get_matches_statistics(match_id)
         
         # Verifica se a resposta contém a chave "statistics" válida
-        if "statistics" not in response or not isinstance(response["statistics"], dict):
-            print(f"Match_id {match_id} não contém estatísticas válidas. Resposta: {response}")
+        if "statistics" not in response or not (isinstance(response["statistics"], dict) or isinstance(response["statistics"], list)):
+            logging.warning(f"Match_id {match_id} não contém estatísticas válidas. Resposta: {response}")
             return None
         
         response_statistics = [{
@@ -41,7 +57,7 @@ def extract_matches_statistics(match_id):
         
     except Exception as e:
         response_statistics = None
-        print(f"Erro ao buscar estatísticas para Match_id: {match_id}. Erro: {str(e)}")
+        logging.error(f"Erro ao buscar estatísticas para Match_id: {match_id}. Erro: {str(e)}")
     
     return response_statistics
 
@@ -67,7 +83,7 @@ def transform_matches_statistics(response_matches):
         # Verifica se existe a chave 'statistics' e se está estruturada corretamente
         statistics = match.get("statistics", {}).get("statistics", [])
         if not statistics:
-            print(f"Match_id {match_id} não contém estatísticas válidas.")
+            logging.warning(f"Match_id {match_id} não contém estatísticas válidas.")
             continue
 
         for stat in statistics:
@@ -113,7 +129,7 @@ def load_matches_statistics(search_match_id, save_path, datetime_now):
     df_matches_statistics_agg = pd.DataFrame()
     for match_id in search_match_id:
         title = f"Matches Statistics - {match_id} - {datetime_now}"
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
         
         response_matches_statistics = extract_matches_statistics(match_id)
         if response_matches_statistics:
@@ -133,6 +149,6 @@ if __name__ == "__main__":
     # Input
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     save_path = r'data\outputs'
-    search_match_id = ["3793061"]
+    search_match_id = ["12146274"]
 
     response_matches_statistics_agg, df_matches_statistics_agg = load_matches_statistics(search_match_id, save_path, datetime_now)

@@ -1,8 +1,25 @@
 import os
 import sys
+import logging
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)  # Cria a pasta 'logs' se não existir
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)  # Também imprime no console
+    ]
+)
+
+# Importações do projeto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
 from scrapers.sofascore_scraper_playwright import SofaScoreScraper
@@ -10,12 +27,12 @@ from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
 def get_countries(sport):
-        """
-        Busca os dados de todos os países disponíveis.
-        """
-        scraper = SofaScoreScraper()
-        url = f"https://www.sofascore.com/api/v1/config/default-unique-tournaments/BR/{sport}"
-        return scraper._make_request(url)
+    """
+    Busca os dados de todos os países disponíveis.
+    """
+    scraper = SofaScoreScraper()
+    url = f"https://www.sofascore.com/api/v1/config/default-unique-tournaments/BR/{sport}"
+    return scraper._make_request(url)
 
 def extract_countries(sport):
     '''
@@ -30,10 +47,10 @@ def extract_countries(sport):
             'countries': get_countries(sport)
         }]
         if not isinstance(response_countries[0]['countries'], dict):
-            print(f"Erro ao buscar países para o esporte {sport}: resposta inválida.")
+            logging.error(f"Erro ao buscar países para o esporte {sport}: resposta inválida.")
             return None
     except Exception as e:
-        print(f"Erro ao buscar dados dos países para o esporte {sport}: {str(e)}")
+        logging.error(f"Erro ao buscar dados dos países para o esporte {sport}: {str(e)}")
         response_countries = None
     
     return response_countries
@@ -61,11 +78,11 @@ def transform_countries(response_countries, datetime_now):
                         list_sport_country_id.append(country['category']['id'])
                         list_updated_at.append(datetime_now)
                     else:
-                        print(f"Dados faltando ou inválidos para o país: {country}")
+                        logging.warning(f"Dados faltando ou inválidos para o país: {country}")
             else:
-                print(f"Dados de países ausentes para o esporte: {sport_countries['sport']}")
+                logging.warning(f"Dados de países ausentes para o esporte: {sport_countries['sport']}")
     else:
-        print("Resposta dos países está vazia ou inválida.")
+        logging.warning("Resposta dos países está vazia ou inválida.")
 
     # Criar DataFrame
     df_countries = pd.DataFrame({
@@ -84,7 +101,7 @@ def load_countries(search_sports, save_path, datetime_now):
     for sport in search_sports:
         title = f"Countries - {sport} - {datetime_now}"
         table = title.split(" - ")[0].lower()
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
         
         response_countries = extract_countries(sport)
         if response_countries:
@@ -98,7 +115,7 @@ def load_countries(search_sports, save_path, datetime_now):
             response_countries_agg.append(response_countries)
             df_countries_agg = pd.concat([df_countries_agg, df_countries], ignore_index=True)
         else:
-            print(f"Não foi possível extrair dados para o esporte: {sport}")
+            logging.error(f"Não foi possível extrair dados para o esporte: {sport}")
         
     return response_countries_agg, df_countries_agg
 

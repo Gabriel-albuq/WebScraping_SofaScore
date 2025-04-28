@@ -2,6 +2,22 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime, timezone, timedelta
+import logging
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
@@ -146,7 +162,7 @@ def load_matches(search_tournament_seasons_round_slug, save_path, datetime_now):
     
     for tournament_id, season_id, round, slug in search_tournament_seasons_round_slug:
         title = f"Matches - {tournament_id} - {season_id} - {round} - {slug} - {datetime_now}"
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
         
         response_matches = extract_matches(tournament_id, season_id, round, slug)
         df_matches = transform_matches(response_matches)

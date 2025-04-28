@@ -1,7 +1,23 @@
 import os
 import sys
 import pandas as pd
+import logging
 from datetime import datetime, timezone, timedelta
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
@@ -31,7 +47,7 @@ def extract_lineups_statistics(match_id):
         }]
     except Exception as e:
         extract_lineups_statistics = None
-        print(f"Erro na Match_id: {match_id} - Erro: {e}")
+        logging.error(f"Erro na Match_id: {match_id} - Erro: {e}")
         pass
 
     return extract_lineups_statistics
@@ -195,7 +211,7 @@ def load_lineups_statistics(search_match_id, save_path, datetime_now):
     df_lineups_statistics_agg = pd.DataFrame()
     for match_id in search_match_id:
         title = f"Lineups Statistics - {match_id} - {datetime_now}"
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
         response_lineups_statistics = extract_lineups_statistics(match_id)
 
         if response_lineups_statistics != None:

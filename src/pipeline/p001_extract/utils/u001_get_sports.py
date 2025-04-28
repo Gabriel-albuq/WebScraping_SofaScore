@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 
@@ -8,6 +9,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from scrapers.sofascore_scraper_playwright import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)  # Cria a pasta 'logs' se não existir
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)  # Também imprime no console
+    ]
+)
 
 def get_sports(scraper):
     """
@@ -26,10 +42,10 @@ def extract_sports(scraper):
     try:
         response_sports = get_sports(scraper)
         if not isinstance(response_sports, dict):
-            print(f"Erro na resposta dos esportes: {response_sports}")
+            logging.error(f"Erro na resposta dos esportes: {response_sports}")
             return None
     except Exception as e:
-        print(f"Erro ao buscar dados dos esportes: {str(e)}")
+        logging.exception(f"Erro ao buscar dados dos esportes: {str(e)}")
         response_sports = None
     
     return response_sports
@@ -46,7 +62,6 @@ def transform_sports(response_sports, datetime_now):
     list_sports = []
     list_updated_at = []
     
-    # Verificação de dados válidos
     if response_sports:
         for sport_name, data_sport in response_sports.items():
             if isinstance(data_sport, dict) and 'live' in data_sport and 'total' in data_sport:
@@ -55,11 +70,10 @@ def transform_sports(response_sports, datetime_now):
                 list_total.append(data_sport['total'])
                 list_updated_at.append(datetime_now)
             else:
-                print(f"Dados inválidos para o esporte {sport_name}: {data_sport}")
+                logging.warning(f"Dados inválidos para o esporte {sport_name}: {data_sport}")
     else:
-        print("Resposta dos esportes está vazia ou inválida.")
+        logging.warning("Resposta dos esportes está vazia ou inválida.")
 
-    # Criar DataFrame
     df_sports = pd.DataFrame({
         'sport': list_sports,
         'live': list_live,
@@ -73,17 +87,16 @@ def load_sports(save_path, datetime_now):
     scraper = SofaScoreScraper()
     title = f"Sports - {datetime_now}"
     table = title.split(" - ")[0].lower()
-    print(f"Extraindo: {title}")
+    logging.info(f"Extraindo: {title}")
 
     response_sports = extract_sports(scraper)
     if response_sports:
         df_sports = transform_sports(response_sports, datetime_now)
         
-        # Salvar
         save_response_to_json(response_sports, save_path, title)
         save_dataframe_to_csv(df_sports, save_path, title)
 
         return response_sports, df_sports
     else:
-        print("Não foi possível extrair dados dos esportes.")
+        logging.error("Não foi possível extrair dados dos esportes.")
         return

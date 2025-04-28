@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import logging
 from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
@@ -9,6 +10,20 @@ from scrapers.sofascore_scraper_playwright import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 def get_rounds(unique_tournament_id, season_id):
     """
@@ -90,7 +105,7 @@ def load_rounds(search_tournament_seasons_id, save_path, datetime_now):
     for tournament_id, season_id in search_tournament_seasons_id:
         title = f"Rounds - {tournament_id} - {season_id} - {datetime_now}"
         table = title.split(" - ")[0].lower()
-        print(f"Extraindo: {title}")
+        logging.info(f"Extraindo: {title}")
 
         response_rounds = extract_rounds(tournament_id, season_id)
         df_rounds = transform_rounds(response_rounds, datetime_now)

@@ -1,6 +1,7 @@
 from datetime import datetime
 import sys
 import os
+import logging
 
 # Adiciona o diretório raiz ao sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -14,6 +15,21 @@ from src.pipeline.p001_extract.utils.u006_get_matches import load_matches
 from src.pipeline.p001_extract.utils.u007_get_matches_statistics import load_matches_statistics
 from src.pipeline.p001_extract.utils.u008_get_lineups import load_lineups
 from src.pipeline.p001_extract.utils.u009_get_lineups_statistics import load_lineups_statistics
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 if __name__ == "__main__":
     '''

@@ -2,9 +2,25 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime, timezone
+import logging
 from scrapers.sofascore_scraper_playwright import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
@@ -21,8 +37,8 @@ def extract_lineups(match_id):
             'match_id': match_id,
             'lineups': get_lineups(match_id)
         }]
-    except:
-        print(f"Erro na Match_id: {match_id}")
+    except Exception as e:
+        logging.error(f"Erro na Match_id: {match_id} - Erro: {str(e)}")
         return None
 
 def transform_lineups(response_matches):
@@ -86,7 +102,7 @@ def load_lineups(search_match_id, save_path, datetime_now):
     """Carrega as escalações para múltiplos match_ids e salva em arquivos"""
     df_lineups_agg = pd.DataFrame()
     for match_id in search_match_id:
-        print(f"Extraindo: Lineups - {match_id} - {datetime_now}")
+        logging.info(f"Extraindo: Lineups - {match_id} - {datetime_now}")
         response_lineups = extract_lineups(match_id)
 
         if response_lineups:
