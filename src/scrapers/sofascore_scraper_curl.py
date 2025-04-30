@@ -5,15 +5,47 @@ import gzip
 import zlib
 import brotli
 import time
+from dotenv import load_dotenv  # Adicionado
+import sys
+import logging
+
+# Configuração do logging
+log_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'logs'))
+os.makedirs(log_folder, exist_ok=True)
+
+log_file = os.path.join(log_folder, 'sports_scraper.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 class SofaScoreScraper:
     def __init__(self):
+        load_dotenv()  # Carrega variáveis do .env
         self.curl = Curl()
         self.origin = 'https://www.sofascore.com/api/v1'
         self.api_key = 'sofascore'
         self.content = None
-        self.buffer = bytearray()  # Buffer para coletar resposta
-        self.response_headers = {}  # Para armazenar os cabeçalhos da resposta
+        self.buffer = bytearray()
+        self.response_headers = {}
+
+        # Configurações do proxy a partir do .env
+        self.proxy_url = os.getenv("PROXY_URL")
+        self.proxy_user = os.getenv("PROXY_USER")
+        self.proxy_password = os.getenv("PROXY_PASSWORD")
+
+        # Monta a string de proxy (se todas as variáveis estiverem definidas)
+        self.proxy = None
+        if self.proxy_url:
+            if self.proxy_user and self.proxy_password:
+                self.proxy = f"http://{self.proxy_user}:{self.proxy_password}@{self.proxy_url.split('://')[-1]}"
+            else:
+                self.proxy = self.proxy_url
 
     def get_headers(self):
         return {
@@ -43,8 +75,9 @@ class SofaScoreScraper:
 
         while attempt < max_retries:
             try:
-                self.buffer = bytearray()  # Resetar buffer
-                self.response_headers = {}  # Resetar cabeçalhos
+                self.buffer = bytearray()
+                self.response_headers = {}
+                self.http_code = None  # Reinicia a cada tentativa
 
                 self.curl.setopt(CurlOpt.URL, url)
                 self.curl.setopt(CurlOpt.HTTPHEADER, [f"{k}: {v}".encode('utf-8') for k, v in headers.items()])
@@ -55,16 +88,25 @@ class SofaScoreScraper:
                 self.curl.setopt(CurlOpt.MAXREDIRS, 5)
                 self.curl.setopt(CurlOpt.WRITEFUNCTION, self._handle_response)
                 self.curl.setopt(CurlOpt.HEADERFUNCTION, self._handle_header)
+
+                if self.proxy:
+                    self.curl.setopt(CurlOpt.PROXY, self.proxy)
+                    logging.info(f"Usando proxy...")
+
                 self.curl.perform()
 
                 if not self.buffer:
                     raise Exception("Nenhum conteúdo recebido.")
 
-                http_code = self.curl.getinfo(2097154)  # CurlInfo.RESPONSE_CODE
-                if http_code != 200:
-                    raise Exception(f"Erro HTTP {http_code}: {self.buffer.decode('utf-8', errors='ignore')}")
+                self.http_code = self.curl.getinfo(2097154)  # CurlInfo.RESPONSE_CODE
 
-                # Decodificar conforme content-encoding
+                if self.http_code == 404:
+                    logging.warning(f"Erro 404 - Recurso não encontrado: {url}")
+                    return None
+
+                if self.http_code != 200:
+                    raise Exception(f"Erro HTTP {self.http_code}: {self.buffer.decode('utf-8', errors='ignore')}")
+
                 content_encoding = self.response_headers.get("content-encoding", "").lower()
                 if content_encoding == 'gzip':
                     self.content = gzip.decompress(self.buffer).decode('utf-8')
@@ -78,29 +120,13 @@ class SofaScoreScraper:
                 return json.loads(self.content)
 
             except Exception as e:
+                if self.http_code == 404:
+                    logging.warning(f"Erro 404 - Recurso não encontrado. Ignorando futuras tentativas.")
+                    return None
+
                 attempt += 1
-                print(f"Tentativa {attempt}/{max_retries} falhou: {e}")
+                logging.warning(f"Tentativa {attempt}/{max_retries} falhou: {e}")
                 if attempt < max_retries:
-                    time.sleep(10)
+                    time.sleep(3)
                 else:
                     raise Exception(f"Falha após {max_retries} tentativas: {e}")
-
-    def _handle_response(self, data):
-        """
-        Callback function to handle response data.
-        Appends the data to the buffer.
-        """
-        self.buffer.extend(data)
-        return len(data)  # Return the length of the data processed
-
-    def _get_content_encoding(self):
-        """
-        Get the Content-Encoding header from the response.
-        """
-        # Use curl_cffi's getinfo to retrieve headers
-        headers = self.curl.getinfo(CurlOpt.HEADER)
-        if headers:
-            for line in headers.decode('utf-8').splitlines():
-                if line.lower().startswith('content-encoding:'):
-                    return line.split(':', 1)[1].strip().lower()
-        return None

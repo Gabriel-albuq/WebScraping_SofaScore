@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -61,7 +61,7 @@ def extract_matches_statistics(match_id):
     
     return response_statistics
 
-def transform_matches_statistics(response_matches):
+def transform_matches_statistics(response_matches, datetime_now):
     '''
     Pegar os dados de overview das partidas
 
@@ -77,6 +77,7 @@ def transform_matches_statistics(response_matches):
     list_home = [] 
     list_away = [] 
     list_statisticstype = [] 
+    list_updated_at = []
     for match in response_matches:
         match_id = match["match_id"]
         
@@ -107,8 +108,8 @@ def transform_matches_statistics(response_matches):
                     list_away.append(away) 
                     list_statisticstype.append(statistics_type) 
                     list_key.append(key)
-
                     list_match_id_key.append(f"{match_id}{key}")
+                    list_updated_at.append(datetime_now)
 
     df_statistics = pd.DataFrame({
         'match_id_key': list_match_id_key,
@@ -119,7 +120,8 @@ def transform_matches_statistics(response_matches):
         'home': list_home,
         'away': list_away,
         'statistics': list_statisticstype,
-        'key': list_key
+        'key': list_key,
+        'updated_at': list_updated_at,
     })
 
     return df_statistics
@@ -142,6 +144,8 @@ def load_matches_statistics(search_match_id, save_path, datetime_now):
             # Agrupar
             response_matches_statistics_agg.append(response_matches_statistics)
             df_matches_statistics_agg = pd.concat([df_matches_statistics_agg, df_matches_statistics], ignore_index=True)
+        else:
+            logging.error(f"Não foi possível extrair dados para a partida: {match_id}")
 
     return response_matches_statistics_agg, df_matches_statistics_agg
 

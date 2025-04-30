@@ -3,7 +3,9 @@ import sys
 import pandas as pd
 from datetime import datetime, timezone
 import logging
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -41,43 +43,29 @@ def extract_lineups(match_id):
         logging.error(f"Erro na Match_id: {match_id} - Erro: {str(e)}")
         return None
 
-def transform_lineups(response_matches):
+def transform_lineups(response_matches, datetime_now):
     """Transforma os dados das escalações em um dataframe"""
     data = {
         'match_id_player_id': [], 'match_id': [], 'home_or_away': [], 'formation': [],
         'player_id': [], 'player_name': [], 'player_slug': [], 'list_country': [],
-        'list_market_currency': [], 'list_market_value': [], 'list_brithdate': [], 
+        'list_market_currency': [], 'list_market_value': [], 'list_birthdate': [], 
         'player_position': [], 'player_number': [], 'player_substitute': [],
-        'player_captain': [], 'player_out_reason': [], 'player_rating_sofascore': []
+        'player_captain': [], 'player_out_reason': [], 'player_rating_sofascore': [], 'updated_at': []
     }
 
     for match in response_matches:
         match_id = match["match_id"]
         for team_key in ["home", "away"]:
             team = match["lineups"].get(team_key, {})
-            formation = team['formation']
+            formation = team.get('formation')
             if team:
                 for player in team.get("players", []):
-                    data['match_id_player_id'].append(f"{match_id}{player['player']['id']}")
-                    data['match_id'].append(match_id)
-                    data['home_or_away'].append(team_key)
-                    data['formation'].append(formation)
-                    data['player_id'].append(player["player"]["id"])
-                    data['player_name'].append(player["player"].get("name"))
-                    data['player_slug'].append(player["player"].get("slug"))
-                    data['list_country'].append(player["player"].get("country", {}).get("name"))
-                    data['list_market_currency'].append(player["player"].get("proposedMarketValueRaw", {}).get("currency"))
-                    data['list_market_value'].append(player["player"].get("proposedMarketValueRaw", {}).get("value"))
-                    data['list_brithdate'].append(datetime.fromtimestamp(player["player"].get("dateOfBirthTimestamp", 0), tz=timezone.utc))
-                    data['player_position'].append(player["player"].get("position"))
-                    data['player_number'].append(player["player"].get("jerseyNumber"))
-                    data['player_substitute'].append(player.get("substitute"))
-                    data['player_captain'].append(player.get("captain"))
-                    data['player_out_reason'].append(None)
-                    data['player_rating_sofascore'].append(player["statistics"].get('rating'))
+                    timestamp = player["player"].get("dateOfBirthTimestamp")
+                    if isinstance(timestamp, (int, float)) and timestamp > 0:
+                        birthdate = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    else:
+                        birthdate = None
 
-                # Afastados (missingPlayers)
-                for player in team.get("missingPlayers", []):
                     data['match_id_player_id'].append(f"{match_id}{player['player']['id']}")
                     data['match_id'].append(match_id)
                     data['home_or_away'].append(team_key)
@@ -88,13 +76,40 @@ def transform_lineups(response_matches):
                     data['list_country'].append(player["player"].get("country", {}).get("name"))
                     data['list_market_currency'].append(player["player"].get("proposedMarketValueRaw", {}).get("currency"))
                     data['list_market_value'].append(player["player"].get("proposedMarketValueRaw", {}).get("value"))
-                    data['list_brithdate'].append(datetime.fromtimestamp(player["player"].get("dateOfBirthTimestamp", 0), tz=timezone.utc))
+                    data['list_birthdate'].append(birthdate)
                     data['player_position'].append(player["player"].get("position"))
                     data['player_number'].append(player["player"].get("jerseyNumber"))
                     data['player_substitute'].append(player.get("substitute"))
                     data['player_captain'].append(player.get("captain"))
                     data['player_out_reason'].append(None)
-                    data['player_rating_sofascore'].append(player["statistics"].get('rating'))
+                    data['player_rating_sofascore'].append(player.get("statistics", {}).get('rating'))
+                    data['updated_at'].append(datetime_now)
+
+                for player in team.get("missingPlayers", []):
+                    timestamp = player["player"].get("dateOfBirthTimestamp")
+                    if isinstance(timestamp, (int, float)) and timestamp > 0:
+                        birthdate = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    else:
+                        birthdate = None
+
+                    data['match_id_player_id'].append(f"{match_id}{player['player']['id']}")
+                    data['match_id'].append(match_id)
+                    data['home_or_away'].append(team_key)
+                    data['formation'].append(formation)
+                    data['player_id'].append(player["player"]["id"])
+                    data['player_name'].append(player["player"].get("name"))
+                    data['player_slug'].append(player["player"].get("slug"))
+                    data['list_country'].append(player["player"].get("country", {}).get("name"))
+                    data['list_market_currency'].append(player["player"].get("proposedMarketValueRaw", {}).get("currency"))
+                    data['list_market_value'].append(player["player"].get("proposedMarketValueRaw", {}).get("value"))
+                    data['list_birthdate'].append(birthdate)
+                    data['player_position'].append(player["player"].get("position"))
+                    data['player_number'].append(player["player"].get("jerseyNumber"))
+                    data['player_substitute'].append(player.get("substitute"))
+                    data['player_captain'].append(player.get("captain"))
+                    data['player_out_reason'].append(None)
+                    data['player_rating_sofascore'].append(player.get("statistics", {}).get('rating'))
+                    data['updated_at'].append(datetime_now)
 
     return pd.DataFrame(data)
 
@@ -102,20 +117,24 @@ def load_lineups(search_match_id, save_path, datetime_now):
     """Carrega as escalações para múltiplos match_ids e salva em arquivos"""
     df_lineups_agg = pd.DataFrame()
     for match_id in search_match_id:
+        title = f"Matches Statistics - {match_id} - {datetime_now}"
         logging.info(f"Extraindo: Lineups - {match_id} - {datetime_now}")
-        response_lineups = extract_lineups(match_id)
 
-        if response_lineups:
+        response_lineups = extract_lineups(match_id)
+        if response_lineups and 'error' not in response_lineups[0]['lineups']:
             df_lineups = transform_lineups(response_lineups)
             save_response_to_json(response_lineups, save_path, f"Lineups - {match_id} - {datetime_now}")
             save_dataframe_to_csv(df_lineups, save_path, f"Lineups - {match_id} - {datetime_now}")
             df_lineups_agg = pd.concat([df_lineups_agg, df_lineups], ignore_index=True)
 
+        else:
+            logging.error(f"Não foi possível extrair dados para a partida: {match_id}")
+            
     return df_lineups_agg
 
 if __name__ == "__main__":
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     save_path = r'data\outputs'
-    search_match_id = ["12146574", "12146576"]
+    search_match_id = ["12024221"]
 
     df_lineups_agg = load_lineups(search_match_id, save_path, datetime_now)

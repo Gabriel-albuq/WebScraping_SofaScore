@@ -1,0 +1,1 @@
+from scrapers.sofascore_scraper_curl import SofaScoreScraper

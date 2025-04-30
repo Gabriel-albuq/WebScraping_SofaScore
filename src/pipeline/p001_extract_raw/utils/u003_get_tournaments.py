@@ -22,7 +22,7 @@ logging.basicConfig(
 # Caminho para importar módulos
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -105,7 +105,6 @@ def load_tournaments(search_sports_countries_id, save_path, datetime_now):
     
     for sport_country_id in search_sports_countries_id:
         title = f"Tournaments - {sport_country_id} - {datetime_now}"
-        table = title.split(" - ")[0].lower()
         logging.info(f"Extraindo: {title}")
         
         response_tournaments = extract_tournaments(sport_country_id)

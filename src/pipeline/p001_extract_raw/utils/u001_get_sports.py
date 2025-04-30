@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -25,14 +25,15 @@ logging.basicConfig(
     ]
 )
 
-def get_sports(scraper):
+def get_sports():
     """
     Busca os dados dos esportes disponíveis.
     """
     url = f"https://www.sofascore.com/api/v1/sport/-10800/event-count"
+    scraper = SofaScoreScraper()
     return scraper._make_request(url)
 
-def extract_sports(scraper):
+def extract_sports():
     '''
     Extrair a resposta do servidor ao scraper dos Esportes
 
@@ -40,7 +41,7 @@ def extract_sports(scraper):
     :return: A resposta do servidor ao scraper Sports
     '''
     try:
-        response_sports = get_sports(scraper)
+        response_sports = get_sports()
         if not isinstance(response_sports, dict):
             logging.error(f"Erro na resposta dos esportes: {response_sports}")
             return None
@@ -84,12 +85,10 @@ def transform_sports(response_sports, datetime_now):
     return df_sports
 
 def load_sports(save_path, datetime_now):
-    scraper = SofaScoreScraper()
     title = f"Sports - {datetime_now}"
-    table = title.split(" - ")[0].lower()
     logging.info(f"Extraindo: {title}")
 
-    response_sports = extract_sports(scraper)
+    response_sports = extract_sports()
     if response_sports:
         df_sports = transform_sports(response_sports, datetime_now)
         

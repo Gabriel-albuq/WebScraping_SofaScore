@@ -22,7 +22,7 @@ logging.basicConfig(
 # Importações do projeto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -100,7 +100,6 @@ def load_countries(search_sports, save_path, datetime_now):
     
     for sport in search_sports:
         title = f"Countries - {sport} - {datetime_now}"
-        table = title.split(" - ")[0].lower()
         logging.info(f"Extraindo: {title}")
         
         response_countries = extract_countries(sport)

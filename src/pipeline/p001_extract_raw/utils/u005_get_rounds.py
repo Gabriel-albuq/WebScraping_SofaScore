@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -104,19 +104,21 @@ def load_rounds(search_tournament_seasons_id, save_path, datetime_now):
 
     for tournament_id, season_id in search_tournament_seasons_id:
         title = f"Rounds - {tournament_id} - {season_id} - {datetime_now}"
-        table = title.split(" - ")[0].lower()
         logging.info(f"Extraindo: {title}")
 
         response_rounds = extract_rounds(tournament_id, season_id)
-        df_rounds = transform_rounds(response_rounds, datetime_now)
+        if response_rounds:
+            df_rounds = transform_rounds(response_rounds, datetime_now)
 
-        # Salvar
-        save_response_to_json(response_rounds, save_path, title)
-        save_dataframe_to_csv(df_rounds, save_path, title)
+            # Salvar
+            save_response_to_json(response_rounds, save_path, title)
+            save_dataframe_to_csv(df_rounds, save_path, title)
 
-        # Agrupar
-        response_rounds_agg.append(response_rounds)
-        df_rounds_agg = pd.concat([df_rounds_agg, df_rounds], ignore_index=True)
+            # Agrupar
+            response_rounds_agg.append(response_rounds)
+            df_rounds_agg = pd.concat([df_rounds_agg, df_rounds], ignore_index=True)
+        else:
+            logging.error(f"Não foi possível extrair dados para o torneio e temporada: {tournament_id, season_id}")
 
     return response_rounds_agg, df_rounds_agg
 

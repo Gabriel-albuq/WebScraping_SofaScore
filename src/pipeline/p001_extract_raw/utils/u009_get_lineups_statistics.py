@@ -21,7 +21,7 @@ logging.basicConfig(
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -52,7 +52,7 @@ def extract_lineups_statistics(match_id):
 
     return extract_lineups_statistics
 
-def transform_lineups_statistics(response_matches):
+def transform_lineups_statistics(response_matches, datetime_now):
     '''
     Pegar os dados de overview das partidas
 
@@ -78,6 +78,7 @@ def transform_lineups_statistics(response_matches):
     list_player_brithdate = []
     list_player_statistic_name = []   
     list_player_statistic_value = []
+    list_updated_at = []
 
     for match in response_matches:
         match_id = match["match_id"]
@@ -161,6 +162,7 @@ def transform_lineups_statistics(response_matches):
                             list_player_out_reason.append(player_out_reason) 
                             list_player_statistic_name.append(stat_name)     
                             list_player_statistic_value.append(stat_value)
+                            list_updated_at.append(datetime_now)
                     except:
                         list_match_id_player_id_statistic_name.append(f"{match_id}{player['player']['id']}{stat_name}")
                         list_match_id_player_id.append(f"{match_id}{player['player']['id']}")
@@ -180,7 +182,8 @@ def transform_lineups_statistics(response_matches):
                         list_player_captain.append(player_captain)
                         list_player_out_reason.append(player_out_reason) 
                         list_player_statistic_name.append(None)     
-                        list_player_statistic_value.append(None)               
+                        list_player_statistic_value.append(None)
+                        list_updated_at.append(datetime_now)            
 
     df_lineups_statistics = pd.DataFrame({
         "match_id_player_id_statistic_name": list_match_id_player_id_statistic_name,
@@ -202,6 +205,7 @@ def transform_lineups_statistics(response_matches):
         "player_out_reason": list_player_out_reason,
         "player_statistic_name": list_player_statistic_name,
         "player_statistic_value": list_player_statistic_value,
+        'updated_at': list_updated_at,
     })
 
     return df_lineups_statistics
@@ -212,8 +216,8 @@ def load_lineups_statistics(search_match_id, save_path, datetime_now):
     for match_id in search_match_id:
         title = f"Lineups Statistics - {match_id} - {datetime_now}"
         logging.info(f"Extraindo: {title}")
-        response_lineups_statistics = extract_lineups_statistics(match_id)
 
+        response_lineups_statistics = extract_lineups_statistics(match_id)
         if response_lineups_statistics != None:
             df_lineups_statistics = transform_lineups_statistics(response_lineups_statistics)
 
@@ -224,6 +228,8 @@ def load_lineups_statistics(search_match_id, save_path, datetime_now):
             # Agrupar
             response_lineups_statistics_agg.append(response_lineups_statistics)
             df_lineups_statistics_agg = pd.concat([df_lineups_statistics_agg, df_lineups_statistics], ignore_index=True)
+        else:
+            logging.error(f"Não foi possível extrair dados para a partida: {match_id}")
 
     return response_lineups_statistics_agg, df_lineups_statistics_agg
 

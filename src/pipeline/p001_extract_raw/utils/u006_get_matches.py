@@ -21,7 +21,7 @@ logging.basicConfig(
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from scrapers.sofascore_scraper_playwright import SofaScoreScraper
+from scrapers.sofascore_scraper import SofaScoreScraper
 from utils.save_response_json import save_response_to_json
 from utils.save_dataframe_csv import save_dataframe_to_csv
 
@@ -53,7 +53,7 @@ def extract_matches(tournament_id, season_id, round, slug):
 
     return response_matches
 
-def transform_matches(response_matches):
+def transform_matches(response_matches, datetime_now):
     '''
     Transformar os dados do response_matches em um dataframe
 
@@ -77,6 +77,7 @@ def transform_matches(response_matches):
     list_away_team_name = []
     list_away_score = []
     list_cup_round_type = []
+    list_updated_at = []
     
     for match in response_matches:
         unique_tournament_id = match["unique_tournament_id"]
@@ -127,6 +128,7 @@ def transform_matches(response_matches):
             list_away_team_name.append(away_team_name)
             list_away_score.append(away_score)
             list_cup_round_type.append(cup_round_type)
+            list_updated_at.append(datetime_now)
 
             if slug == None:
                 list_season_id_round_slug.append(f"{season_id}{round}")
@@ -152,6 +154,7 @@ def transform_matches(response_matches):
         'away_score': list_away_score,
         'away_team_name': list_away_team_name,
         'away_team_id': list_away_team_id,
+        'updated_at': list_updated_at,
     })
 
     return df_matches
@@ -165,15 +168,18 @@ def load_matches(search_tournament_seasons_round_slug, save_path, datetime_now):
         logging.info(f"Extraindo: {title}")
         
         response_matches = extract_matches(tournament_id, season_id, round, slug)
-        df_matches = transform_matches(response_matches)
+        if response_matches:
+            df_matches = transform_matches(response_matches)
 
-        # Agrupar
-        response_matches_agg.append(response_matches)
-        df_matches_agg = pd.concat([df_matches_agg, df_matches], ignore_index=True)
+            # Agrupar
+            response_matches_agg.append(response_matches)
+            df_matches_agg = pd.concat([df_matches_agg, df_matches], ignore_index=True)
 
-        # Salvar
-        save_response_to_json(response_matches, save_path, title)
-        save_dataframe_to_csv(df_matches, save_path, title)
+            # Salvar
+            save_response_to_json(response_matches, save_path, title)
+            save_dataframe_to_csv(df_matches, save_path, title)
+        else:
+            logging.error(f"Não foi possível extrair dados para o torneio, temporada, rodada e slug: {tournament_id, season_id, round, slug}")
 
     return response_matches_agg, df_matches_agg
 
@@ -181,6 +187,6 @@ if __name__ == "__main__":
     # Input
     datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     save_path = r'data\outputs'
-    search_tournament_seasons_round_slug = [("390", "59015", "38", None)]
+    search_tournament_seasons_round_slug = [("325", "48982", "1", None)]
     
     response_matches_agg, df_matches_agg = load_matches(search_tournament_seasons_round_slug, save_path, datetime_now)

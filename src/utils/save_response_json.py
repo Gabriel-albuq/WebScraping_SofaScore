@@ -9,15 +9,11 @@ def save_response_to_json(data, path, title):
     :param path: str - O caminho do diretório onde o arquivo será salvo.
     :param title: str - O título (nome) do arquivo JSON.
     """
-    title_path = title.split(" - ")[0]
-    datetime_now = title.rsplit(" - ", 1)[-1]
-    path_bronze = os.path.join(path, "bronze", datetime_now, title_path)
-
     # Garante que o caminho exista
-    os.makedirs(path_bronze, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
     
     # Concatena o caminho com o título e a extensão .json
-    file_path = os.path.join(path_bronze, f"{title}.json")
+    file_path = os.path.join(path, f"{title}.json")
     
     # Salva os dados como JSON
     with open(file_path, 'w', encoding='utf-8') as f:
