@@ -117,7 +117,7 @@ def load_lineups(search_match_id, save_path, datetime_now):
     """Carrega as escalações para múltiplos match_ids e salva em arquivos"""
     df_lineups_agg = pd.DataFrame()
     for match_id in search_match_id:
-        title = f"Matches Statistics - {match_id} - {datetime_now}"
+        title = f"Lineups - {match_id} - {datetime_now}"
         logging.info(f"Extraindo: Lineups - {match_id} - {datetime_now}")
 
         response_lineups = extract_lineups(match_id)
